@@ -1,6 +1,5 @@
 import { CO2 } from './esm/co2.js';
 
-
 const button = document.getElementById('click-me');
 const loading = document.querySelector('.loading');
 const result = document.getElementById('result');
@@ -8,22 +7,41 @@ const result = document.getElementById('result');
 async function predictCO2AndGreenStatus(url) {
   const emissions = new CO2({ model: "swd", version: 4 });
 
-  // For this example, we'll use a placeholder value for bytes
-  // In a real scenario, you'd need to determine the actual byte size of the webpage
-  const bytes = 1000000; // 1 MB as an example
+  // Function to get the byte size of the webpage
+  async function getWebpageSize(url) {
+    try {
+      const response = await fetch(url);
+      const text = await response.text();
+      const bytes = new Blob([text]).size;
+      return bytes;
+    } catch (error) {
+      console.error('Error fetching webpage:', error);
+      return 0;
+    }
+  }
 
-  const co2Grams = await emissions.perVisit(bytes);
+  // Get the actual byte size of the webpage
+  const bytes = await getWebpageSize(url);
+
+  const co2Result = await emissions.perVisit(bytes);
+  const co2Grams = typeof co2Result === 'number' ? co2Result : co2Result.co2;
 
   const averageCO2 = 1.76; // Update this value based on more recent data if available
   const cleanerThanPercentage = Math.max(0, Math.min(100, (1 - (co2Grams / averageCO2)) * 100)).toFixed(0);
 
-  const rating = emissions.model.getRating(co2Grams);
-
   return {
     co2Grams: co2Grams.toFixed(2),
     cleanerThanPercentage,
-    rating,
+    rating: getRating(co2Grams),
   };
+}
+
+function getRating(co2Grams) {
+  if (co2Grams < 0.4) return 'A';
+  if (co2Grams < 0.8) return 'B';
+  if (co2Grams < 1.2) return 'C';
+  if (co2Grams < 1.6) return 'D';
+  return 'E';
 }
 
 button.addEventListener('click', async () => {
@@ -43,7 +61,6 @@ button.addEventListener('click', async () => {
         <p><strong>&#128202; Cleaner than ${prediction.cleanerThanPercentage}% of tested websites</strong></p>
         <p><strong>&#127942; Energy Efficiency Rating: ${prediction.rating}</strong></p>
       `;
-      // Remove the Green Status line from the result HTML
     } catch (error) {
       console.error('Error in prediction:', error);
       result.innerHTML = "<p><strong>&#10060; Error analyzing page content.</strong></p>";
