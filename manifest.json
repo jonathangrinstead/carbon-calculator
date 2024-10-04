@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Carbon-Calculator",
+  "description": "A simple carbon calculator for the web",
+  "version": "1.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "leaf.png"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["esm/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
