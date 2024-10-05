@@ -26,6 +26,23 @@ async function predictCO2AndGreenStatus(url) {
   const co2Result = await emissions.perVisit(bytes);
   const co2Grams = typeof co2Result === 'number' ? co2Result : co2Result.co2;
 
+  const hostname = new URL(url).hostname;
+  async function greenStatus(hostname) {
+    try {
+      const response = await fetch(`https://api.thegreenwebfoundation.org/api/v3/greencheck/${hostname}`, {
+        method: "GET",
+      });
+      const data = await response.json();
+      return data.green;
+    } catch (error) {
+      console.error('Error checking green status:', error);
+      return false;
+    }
+  }
+
+  // Call the greenStatus function and await its result
+  const isGreen = await greenStatus(hostname);
+
   const averageCO2 = 1.76; // Update this value based on more recent data if available
   const cleanerThanPercentage = Math.max(0, Math.min(100, (1 - (co2Grams / averageCO2)) * 100)).toFixed(0);
 
@@ -33,6 +50,7 @@ async function predictCO2AndGreenStatus(url) {
     co2Grams: co2Grams.toFixed(2),
     cleanerThanPercentage,
     rating: getRating(co2Grams),
+    isGreen: isGreen,
   };
 }
 
@@ -54,9 +72,12 @@ button.addEventListener('click', async () => {
     try {
       const prediction = await predictCO2AndGreenStatus(url);
 
+      console.log(prediction.isGreen)
+
       loading.style.display = 'none';
 
       result.innerHTML = `
+        ${prediction.isGreen ? '<p><strong>&#9989; This website is green!</strong></p>' : '<p><strong>&#10060; This website is not green.</strong></p>'}
         <p><strong>&#127981; CO2 Emissions: ${prediction.co2Grams}g per visit</strong></p>
         <p><strong>&#128202; Cleaner than ${prediction.cleanerThanPercentage}% of tested websites</strong></p>
         <p><strong>&#127942; Energy Efficiency Rating: ${prediction.rating}</strong></p>
@@ -66,4 +87,17 @@ button.addEventListener('click', async () => {
       result.innerHTML = "<p><strong>&#10060; Error analyzing page content.</strong></p>";
     }
   });
+});
+
+let infoModalVisible = false;
+
+document.getElementById('info-icon').addEventListener('click', () => {
+  const infoModal = document.getElementById('info-modal');
+  infoModalVisible = !infoModalVisible;
+  infoModal.style.display = infoModalVisible ? 'block' : 'none';
+});
+
+document.getElementById('info-modal').addEventListener('click', () => {
+  infoModalVisible = false;
+  document.getElementById('info-modal').style.display = 'none';
 });
