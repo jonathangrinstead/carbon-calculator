@@ -88,10 +88,18 @@ async function predictCO2AndGreenStatus(url) {
     return total + estimateImageSize(img.naturalWidth, img.naturalHeight);
   }, 0);
 
-  // Estimate page size (you might want to adjust this base size)
-  const estimatedPageSize = 100000; // 100 KB as a base size
+  // Get actual page size
+  let actualPageSize = 0;
+  try {
+    const response = await fetch(url);
+    const text = await response.text();
+    actualPageSize = new Blob([text]).size;
+  } catch (error) {
+    console.error('Error fetching page size:', error);
+    actualPageSize = 100000; // Fallback to 100 KB if fetch fails
+  }
 
-  const totalBytes = estimatedPageSize + totalImageSize;
+  const totalBytes = actualPageSize + totalImageSize;
 
   const co2Result = await emissions.perVisit(totalBytes);
   const co2Grams = typeof co2Result === 'number' ? co2Result : co2Result.co2;
@@ -113,28 +121,72 @@ async function predictCO2AndGreenStatus(url) {
   // Call the greenStatus function and await its result
   const isGreen = await greenStatus(hostname);
 
-  const averageCO2 = 1.76; // Update this value based on more recent data if available
+  const averageCO2 = 4.61; // Update this value based on more recent data if available
   const cleanerThanPercentage = Math.max(0, Math.min(100, (1 - (co2Grams / averageCO2)) * 100)).toFixed(0);
 
   console.log('CO2 calculation completed');
+
+  // Analyze image types and suggest optimizations
+  const imageAnalysis = analyzeImages(imagesInfo);
+  console.log('Image analysis:', imageAnalysis);
+
+  function analyzeImages(images) {
+    const analysis = {
+      suggestions: [],
+      inefficientCount: 0,
+      largeImageCount: 0
+    };
+
+    images.forEach(img => {
+      const fileType = getFileTypeFromSrc(img.src);
+      if (fileType === 'png' || fileType === 'bmp') {
+        analysis.inefficientCount++;
+        if (fileType === 'png') {
+          analysis.suggestions.push(`Consider converting PNG to WebP for better compression.`);
+        } else if (fileType === 'bmp') {
+          analysis.suggestions.push(`Consider converting BMP to a more efficient format like JPEG or WebP.`);
+        }
+      }
+      // Check for large images that might benefit from compression
+      if (img.naturalWidth > 1000 || img.naturalHeight > 1000) {
+        analysis.largeImageCount++;
+      }
+    });
+
+    if (analysis.largeImageCount > 0) {
+      analysis.suggestions.push(`${analysis.largeImageCount} large images detected. Consider resizing or compressing images larger than 1000x1000.`);
+    }
+
+    // Remove duplicate suggestions
+    analysis.suggestions = [...new Set(analysis.suggestions)];
+
+    return analysis;
+  }
+
+  function getFileTypeFromSrc(src) {
+    const extension = src.split('.').pop().toLowerCase();
+    return extension.split('?')[0]; // Remove query parameters if any
+  }
 
   return {
     co2Grams: co2Grams.toFixed(2),
     cleanerThanPercentage,
     rating: getRating(co2Grams),
     isGreen: isGreen,
-    totalBytes: totalBytes, // Added for debugging
-    imageCount: imagesInfo.length // Added for debugging
+    imageAnalysis: imageAnalysis
   };
 }
 
 function getRating(co2Grams) {
-  if (co2Grams < 0.4) return 'A';
-  if (co2Grams < 0.8) return 'B';
-  if (co2Grams < 1.2) return 'C';
-  if (co2Grams < 1.6) return 'D';
-  return 'E';
+  if (co2Grams < 2.0) return 'A';
+  if (co2Grams < 3.2) return 'B';
+  if (co2Grams < 4.4) return 'C';
+  if (co2Grams < 5.6) return 'D';
+  if (co2Grams < 6.8) return 'E';
+  if (co2Grams < 8.0) return 'F';
+  return 'G';
 }
+
 
 function waitForContentScript(tabId) {
   return new Promise((resolve) => {
@@ -169,8 +221,10 @@ button.addEventListener('click', async () => {
       <p>&#128200; Cleaner than: <strong>${data.cleanerThanPercentage}% of pages</strong></p>
       <p>&#11088; Rating: <strong>${data.rating}</strong></p>
       <p>&#127807; Green hosting: <strong>${data.isGreen ? 'Yes' : 'No'}</strong></p>
-      <p>&#128190; Total bytes: <strong>${data.totalBytes.toFixed(2)}</strong></p>
-      <p>&#128444;&#65039; Image count: <strong>${data.imageCount}</strong></p>
+      <p>&#128200; Image analysis:</p>
+      <ul>
+        ${data.imageAnalysis.suggestions.map(suggestion => `<li><strong>${suggestion}</strong></li>`).join('')}
+      </ul>
     `;
   } catch (error) {
     console.error('Error in main process:', error);
