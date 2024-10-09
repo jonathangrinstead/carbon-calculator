@@ -1,5 +1,3 @@
-console.log("Background script loaded");
-
 let totalBytes = 0;
 let isCollecting = false;
 

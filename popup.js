@@ -4,8 +4,6 @@ const button = document.getElementById('click-me');
 const loading = document.querySelector('.loading');
 const result = document.getElementById('result');
 
-console.log('Popup script started');
-
 async function injectContentScript(tabId) {
   return new Promise((resolve, reject) => {
     chrome.scripting.executeScript(
@@ -25,38 +23,29 @@ async function injectContentScript(tabId) {
 }
 
 async function getImagesInfo() {
-  console.log('getImagesInfo started');
   return new Promise((resolve) => {
     chrome.tabs.query({active: true, currentWindow: true}, async (tabs) => {
-      console.log('Tab query completed');
       if (chrome.runtime.lastError) {
-        console.error('Error querying tabs:', chrome.runtime.lastError);
         resolve([]);
         return;
       }
 
       if (tabs.length === 0) {
-        console.error('No active tab found');
         resolve([]);
         return;
       }
 
       try {
         await injectContentScript(tabs[0].id);
-        console.log('Content script injected');
 
-        console.log('Sending message to content script');
         chrome.tabs.sendMessage(tabs[0].id, {action: "getImagesInfo"}, (response) => {
-          console.log('Received response from content script', response);
           if (chrome.runtime.lastError) {
-            console.error('Error sending message:', chrome.runtime.lastError);
             resolve([]);
           } else {
             resolve(response || []);
           }
         });
       } catch (error) {
-        console.error('Error injecting content script:', error);
         resolve([]);
       }
     });
@@ -64,18 +53,14 @@ async function getImagesInfo() {
 }
 
 async function predictCO2AndGreenStatus(url) {
-  console.log('predictCO2AndGreenStatus started');
   const emissions = new CO2({ model: "swd", version: 4 });
 
-  console.log('Getting images info');
   let imagesInfo;
   try {
     imagesInfo = await getImagesInfo();
   } catch (error) {
-    console.error('Error getting images info:', error);
     imagesInfo = [];
   }
-  console.log('Images info received:', imagesInfo);
 
   // Function to estimate image size based on dimensions
   function estimateImageSize(width, height) {
@@ -124,11 +109,8 @@ async function predictCO2AndGreenStatus(url) {
   const averageCO2 = 4.61; // Update this value based on more recent data if available
   const cleanerThanPercentage = Math.max(0, Math.min(100, (1 - (co2Grams / averageCO2)) * 100)).toFixed(0);
 
-  console.log('CO2 calculation completed');
-
   // Analyze image types and suggest optimizations
   const imageAnalysis = analyzeImages(imagesInfo);
-  console.log('Image analysis:', imageAnalysis);
 
   function analyzeImages(images) {
     const analysis = {
@@ -187,7 +169,6 @@ function getRating(co2Grams) {
   return 'G';
 }
 
-
 function waitForContentScript(tabId) {
   return new Promise((resolve) => {
     function checkContentScript() {
@@ -204,16 +185,13 @@ function waitForContentScript(tabId) {
 }
 
 button.addEventListener('click', async () => {
-  console.log('Button clicked');
-  button.style.display = 'none'; // Hide the button
+  button.style.display = 'none';
   loading.style.display = 'block';
   result.innerHTML = '';
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    console.log('Current tab:', tab.url);
     const data = await predictCO2AndGreenStatus(tab.url);
-    console.log('Prediction completed:', data);
 
     // Display the result
     result.innerHTML = `
@@ -227,9 +205,8 @@ button.addEventListener('click', async () => {
       </ul>
     `;
   } catch (error) {
-    console.error('Error in main process:', error);
     result.innerHTML = 'An error occurred. Please try again.';
-    button.style.display = 'block'; // Show the button again if there's an error
+    button.style.display = 'block';
   } finally {
     loading.style.display = 'none';
   }
@@ -247,5 +224,3 @@ document.getElementById('info-modal').addEventListener('click', () => {
   infoModalVisible = false;
   document.getElementById('info-modal').style.display = 'none';
 });
-
-console.log('Popup script finished loading');
