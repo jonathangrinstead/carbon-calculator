@@ -92,7 +92,7 @@ async function predictCO2AndGreenStatus(url) {
   const hostname = new URL(url).hostname;
   async function greenStatus(hostname) {
     try {
-      const response = await fetch(`https://api.thegreenwebfoundation.org/api/v3/greencheck/${hostname}`, {
+      const response = await webRequest.get(`https://api.thegreenwebfoundation.org/api/v3/greencheck/${hostname}`, {
         method: "GET",
       });
       const data = await response.json();
@@ -223,4 +223,10 @@ document.getElementById('info-icon').addEventListener('click', () => {
 document.getElementById('info-modal').addEventListener('click', () => {
   infoModalVisible = false;
   document.getElementById('info-modal').style.display = 'none';
+});
+
+document.getElementById('privacy-link').addEventListener('click', () => {
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('privacy.html')
+  });
 });

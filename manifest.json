@@ -20,7 +20,9 @@
     "webRequest"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://api.thegreenwebfoundation.org/*",
+    "http://*/*",
+    "https://*/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
@@ -37,5 +39,6 @@
       "resources": ["esm/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "privacy_policy": "privacy.html"
 }
