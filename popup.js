@@ -227,6 +227,6 @@ document.getElementById('info-modal').addEventListener('click', () => {
 
 document.getElementById('privacy-link').addEventListener('click', () => {
   chrome.tabs.create({
-    url: chrome.runtime.getURL('privacy.html')
+    url: 'https://jonathangrinstead.dev/carbon_calculator_privacy_policy'
   });
 });
